@@ -37,6 +37,11 @@ namespace LevelEditor
         {
             if (TileID != 0)
                 Main.spriteBatch.Draw(texture, rect, Color.White);
+
+            if (rect.Contains(Main.mouse.Position.ToVector2() / Main.zoom) && TileID != Main.selectedMaterial)
+            {
+                Main.spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], rect, Color.White * 0.7f); // Color.White * 0.5f halbiert die transparenz
+            }
         }
     }
 }

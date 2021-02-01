@@ -56,6 +56,7 @@ namespace LevelEditor
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             instance = this;
+            Window.AllowUserResizing = true;
 
             // Maximize Window
             System.Windows.Forms.Form form = (System.Windows.Forms.Form)System.Windows.Forms.Control.FromHandle(Window.Handle);
