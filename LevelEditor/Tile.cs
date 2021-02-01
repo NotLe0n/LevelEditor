@@ -28,7 +28,7 @@ namespace LevelEditor
                 }
                 if (rect.Contains(Main.mouse.Position.ToVector2() / Main.zoom) && Main.LeftHeld)
                 {
-                    TileID = 1;
+                    TileID = Main.selectedMaterial;
                     texture = Main.textureMap.textures[Main.selectedMaterial];
                 }
             }
