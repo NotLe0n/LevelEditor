@@ -261,7 +261,7 @@ namespace LevelEditor
         /// <returns>A Texture2D containing the specified part</returns>
         public static Texture2D LoadTexturePart(string path, Rectangle srcRect)
         {
-            using (FileStream fileStream = new FileStream(Path.GetDirectoryName(selectedFile) + @"\Content\" + path + ".png", FileMode.Open))
+            using (FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open))
             {
                 Texture2D wholeTex = Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
                 Texture2D returnTex = new Texture2D(instance.GraphicsDevice, srcRect.Width, srcRect.Height);
