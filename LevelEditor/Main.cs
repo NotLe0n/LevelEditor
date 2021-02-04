@@ -56,6 +56,7 @@ namespace LevelEditor
         private UIButton inputBtn;
         private List<UIButton> materialList = new List<UIButton>();
         private UIButton saveBtn;
+        private UIImage texmapImg;
         public Main()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -121,7 +122,6 @@ namespace LevelEditor
                         }
                     }
                 }
-
             }
 
             base.Update(gameTime);
@@ -176,29 +176,13 @@ namespace LevelEditor
                     selectedFile = openFileDialog.FileName;
                     tileMap = new TileMap(selectedFile);
 
-                    materialList = new List<UIButton>();
-                    selectedMaterial = 1;
-                    int temp = 0;
-                    for (int i = 0; i < textureMap.textures.Count; i++)
-                    {
-                        var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
-                        temp += 70;
-                        btn.X.Percent = 50;
-                        btn.Y.Pixels = temp;
-                        btn.OnClick += (evt, elm) =>
-                        {
-                            if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
-                                selectedMaterial = result;
-                            else
-                                selectedMaterial = 0;
-                        };
-                        var matImg = new UIImage(textureMap.textures[i], 32, 32);
-                        matImg.Y.Percent = 50;
-                        matImg.X.Percent = 25;
-                        btn.Append(matImg);
-                        materialList.Add(btn);
-                        panel.Append(btn);
-                    }
+                    ReloadMaterialList();
+
+                    texmapImg = new UIImage(textureMap.map, (int)(textureMap.map.Width / 2.5f), (int)(textureMap.map.Height / 2.5f));
+                    texmapImg.Y.Pixels = 70 * materialList.Count + 100;
+                    texmapImg.X.Pixels = 20;
+                    texmapImg.OnClick += OpenTexMap;
+                    panel.Append(texmapImg);
 
                     saveBtn = new UIButton(new UIText("Save File", Color.White), 100, 30, Color.DarkGray);
                     saveBtn.OnClick += SaveFile;
@@ -206,13 +190,48 @@ namespace LevelEditor
                     saveBtn.Y.Percent = 95;
                     panel.Append(saveBtn);
                 }
-                else
-                {
-                    Debug.WriteLine("retar");
-                }
-                Debug.WriteLine("stank");
             }
         }
+
+        private void OpenTexMap(MouseState evt, UIElement elm)
+        {
+            using (System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = Content.RootDirectory;
+                openFileDialog.Filter = "Texmap files (*.texmap)|*.texmap";
+                openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    string file = openFileDialog.FileName;
+                    textureMap = new TextureMap(file);
+                    for (int x = 0; x < tileMap.width; x++)
+                    {
+                        for (int y = 0; y < tileMap.height; y++)
+                        {
+                            try
+                            {
+                                tileMap.tiles[x, y].texture = textureMap.textures[tileMap.tiles[x, y].TileID];
+                            }
+                            catch
+                            {
+                                tileMap.tiles[x, y].TileID = 0;
+                            }
+                        }
+                    }
+
+                    ReloadMaterialList();
+
+                    texmapImg.Remove();
+                    texmapImg = new UIImage(textureMap.map, (int)(textureMap.map.Width / 2.5f), (int)(textureMap.map.Height / 2.5f));
+                    texmapImg.Y.Pixels = 70 * materialList.Count + 100;
+                    texmapImg.X.Pixels = 20;
+                    texmapImg.OnClick += OpenTexMap;
+                    panel.Append(texmapImg);
+                }
+            }
+        }
+
         private void SaveFile(MouseState evt, UIElement elm)
         {
             string newFile = Path.GetFileName(textureMap.filePath) + "\nmap:\n";
@@ -237,6 +256,36 @@ namespace LevelEditor
                     using var sr = new StreamWriter(fileStream);
                     sr.WriteLine(newFile.Trim());
                 }
+            }
+        }
+        private void ReloadMaterialList()
+        {
+            for(int i = 0; i < materialList.Count; i++)
+            {
+                materialList[i].Remove();
+            }
+            materialList = new List<UIButton>();
+            selectedMaterial = 1;
+            int temp = 0;
+            for (int i = 0; i < textureMap.textures.Count; i++)
+            {
+                var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
+                temp += 70;
+                btn.X.Percent = 50;
+                btn.Y.Pixels = temp;
+                btn.OnClick += (evt, elm) =>
+                {
+                    if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
+                        selectedMaterial = result;
+                    else
+                        selectedMaterial = 0;
+                };
+                var matImg = new UIImage(textureMap.textures[i], 32, 32);
+                matImg.Y.Percent = 50;
+                matImg.X.Percent = 25;
+                btn.Append(matImg);
+                materialList.Add(btn);
+                panel.Append(btn);
             }
         }
         /// <summary>
@@ -267,7 +316,7 @@ namespace LevelEditor
         /// <returns>the loaded Texture</returns>
         public static Texture2D LoadTexture(string path)
         {
-            using (FileStream fileStream = new FileStream(path, FileMode.Open))
+            using (FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open))
             {
                 return Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
             }

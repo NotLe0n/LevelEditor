@@ -13,6 +13,7 @@ namespace LevelEditor
     {
         public Dictionary<int, Texture2D> textures;//The Dictianory holding the Textures
         public string filePath;
+        public Texture2D map;
         public TextureMap(string file)
         {
             filePath = file;
@@ -23,6 +24,7 @@ namespace LevelEditor
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] line = lines[i].Split(' ');
+                map = Main.LoadTexture(line[1]);
                 //Loading a single png without srcRect like before
                 if (line.Length == 2)
                 {

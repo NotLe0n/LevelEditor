@@ -499,12 +499,11 @@ namespace LevelEditor.UI
             item.Recalculate();
         }
 
-        public void Remove(UIElement item)
+        public void Remove()
         {
-            if (item == null) throw new ArgumentNullException(nameof(item));
-
-            Children.Remove(item);
-            item.Parent = null;
+            Parents.Remove(this);
+            Parent.Children.Remove(this);
+            Parent = null;
         }
 
         public void Clear()
