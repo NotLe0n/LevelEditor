@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,12 +11,14 @@ namespace LevelEditor
 {
     public class Main : Game
     {
+        // engine stuff
         public static GraphicsDeviceManager graphics;
         public static SpriteBatch spriteBatch;
         public static Texture2D solid;
         public static SpriteFont font;
         public static Game instance;
-        public static Rectangle screen {
+        public static Rectangle screen
+        {
             get
             {
                 // Update Screen variable
@@ -23,6 +26,7 @@ namespace LevelEditor
                 return new Rectangle(sex.X, sex.Y, sex.Width, sex.Height);
             }
         }
+        public static string? MouseText;
         // input stuff
         public static MouseState mouse = Mouse.GetState();
         public static MouseState lastmouse;
@@ -37,7 +41,7 @@ namespace LevelEditor
         public static bool mouseMoved;
         public static float scrollwheel;
         public static Vector2 mousedelta;
-        public static bool mouseOverUI => UIElement.Elements.Exists(x => x.isMouseOver);
+        public static bool mouseOverUI => UIElement.Parents.Exists(x => x.IsMouseHovering);
 
         // editor
         public static string selectedFile;
@@ -45,6 +49,8 @@ namespace LevelEditor
         public static TextureMap textureMap;
         public static float zoom = 1;
         public static int selectedMaterial = 1;
+        public static Matrix UIScaleMatrix => Matrix.CreateScale(1f);
+        public static float UIScale = 1f;
         // ui
         private UIPanel panel;
         private UIButton inputBtn;
@@ -65,37 +71,14 @@ namespace LevelEditor
 
         protected override void Initialize()
         {
-            panel = new UIPanel(300, screen.Height, new Color(33, 33, 33));
-            inputBtn = new UIButton(new UIText("Load tile", Color.White), 100, 30, Color.Blue);
-            inputBtn.Click += (elm) =>
-            {
-                materialList = new List<UIButton>();
-                selectedMaterial = 1;
-                if (OpenFile())
-                {
-                    int temp = 0;
-                    for (int i = 0; i < textureMap.textures.Count; i++)
-                    {
-                        var btn = new UIButton(new UIText(i, Color.White), 100, 50, Color.DarkGray);
-                        temp += 70;
-                        btn.absolutePos = new Vector2(0, temp);
-                        btn.Click += (elm) =>
-                        {
-                            if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
-                                selectedMaterial = result;
-                            else
-                                selectedMaterial = 0;
-                        };
-                        materialList.Add(btn);
-                    }
 
-                    saveBtn = new UIButton(new UIText("Save File", Color.White), 100, 30, Color.DarkGray);
-                    saveBtn.absolutePos = new Vector2(50, screen.Height - 100);
-                    saveBtn.Click += SaveFile;
-                    panel.Append(saveBtn);
-                    panel.Append(inputBtn);
-                }
-            };
+            panel = new UIPanel(new StyleDimension(300, 0), new StyleDimension(0, 1), new Color(33, 33, 33));
+            inputBtn = new UIButton(new UIText("Load tile", Color.White), 100, 30, Color.Blue);
+            panel.Append(inputBtn);
+            inputBtn.Padding = new Padding(5);
+            inputBtn.X.Percent = 50;
+            inputBtn.Y.Pixels = 10;
+            inputBtn.OnClick += OpenFile;
             base.Initialize();
         }
 
@@ -113,9 +96,9 @@ namespace LevelEditor
 
             UpdateInput();
             zoom -= scrollwheel;
-            for (int i = 0; i < UIElement.Elements.Count; i++)
+            for (int i = 0; i < UIElement.Parents.Count; i++)
             {
-                UIElement.Elements[i].Update(gameTime);
+                UIElement.Parents[i].InternalUpdate(gameTime);
             }
 
             if (tileMap != null)
@@ -146,12 +129,13 @@ namespace LevelEditor
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.Gray);
 
             Matrix transform = Matrix.CreateScale(new Vector3(zoom, zoom, 1));
             if (tileMap != null)
             {
                 spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.NonPremultiplied, null, null, null, null, transform);
+                spriteBatch.Draw(solid, new Rectangle(tileMap.tiles[0, 0].Position.ToPoint(), new Point(tileMap.width * 50, tileMap.height * 50)), Color.Black * 0.5f);
                 for (int x = 0; x < tileMap.width; x++)
                 {
                     for (int y = 0; y < tileMap.height; y++)
@@ -163,21 +147,23 @@ namespace LevelEditor
             }
 
             spriteBatch.Begin();
-            for (int i = 0; i < UIElement.Elements.Count; i++)
+            for (int i = 0; i < UIElement.Parents.Count; i++)
             {
-                UIElement.Elements[i].Draw(spriteBatch);
+                UIElement.Parents[i].InternalDraw(spriteBatch);
             }
-            for (int i = 0; i < materialList.Count; i++)
+
+            if (MouseText != null)
             {
-                spriteBatch.Draw(textureMap.textures[i], new Rectangle(materialList[i].absolutePos.ToPoint() + new Point(10, materialList[i].Height / 4), new Point(32, 32)), Color.White);
+                spriteBatch.DrawString(font, MouseText, (mouse.Position + new Point(10)).ToVector2(), Color.White);
+                MouseText = null;
             }
             spriteBatch.End();
-            panel.Height = screen.Height;
+            panel.Height.Pixels = screen.Height;
 
             base.Draw(gameTime);
         }
 
-        private bool OpenFile()
+        private void OpenFile(MouseState evt, UIElement elm)
         {
             using (System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog())
             {
@@ -189,12 +175,45 @@ namespace LevelEditor
                 {
                     selectedFile = openFileDialog.FileName;
                     tileMap = new TileMap(selectedFile);
-                    return true;
+
+                    materialList = new List<UIButton>();
+                    selectedMaterial = 1;
+                    int temp = 0;
+                    for (int i = 0; i < textureMap.textures.Count; i++)
+                    {
+                        var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
+                        temp += 70;
+                        btn.X.Percent = 50;
+                        btn.Y.Pixels = temp;
+                        btn.OnClick += (evt, elm) =>
+                        {
+                            if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
+                                selectedMaterial = result;
+                            else
+                                selectedMaterial = 0;
+                        };
+                        var matImg = new UIImage(textureMap.textures[i], 32, 32);
+                        matImg.Y.Percent = 50;
+                        matImg.X.Percent = 25;
+                        btn.Append(matImg);
+                        materialList.Add(btn);
+                        panel.Append(btn);
+                    }
+
+                    saveBtn = new UIButton(new UIText("Save File", Color.White), 100, 30, Color.DarkGray);
+                    saveBtn.OnClick += SaveFile;
+                    saveBtn.X.Percent = 50;
+                    saveBtn.Y.Percent = 95;
+                    panel.Append(saveBtn);
                 }
+                else
+                {
+                    Debug.WriteLine("retar");
+                }
+                Debug.WriteLine("stank");
             }
-            return false;
         }
-        private void SaveFile(UIElement elm)
+        private void SaveFile(MouseState evt, UIElement elm)
         {
             string newFile = Path.GetFileName(textureMap.filePath) + "\nmap:\n";
             for (int y = 0; y < tileMap.height; y++)

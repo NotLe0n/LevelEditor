@@ -17,10 +17,12 @@ namespace LevelEditor.UI
             Text = text.ToString();
             TextColor = textColor;
         }
-        public override void Draw(SpriteBatch spriteBatch)
+        protected override void Draw(SpriteBatch spriteBatch)
         {
-            bounds = new Rectangle(absolutePos.ToPoint(), Main.font.MeasureString(Text).ToPoint());
-            spriteBatch.DrawString(Main.font, Text, absolutePos, TextColor);
+            Width.Pixels = (int)Main.font.MeasureString(Text).X;
+            Height.Pixels = (int)Main.font.MeasureString(Text).Y;
+            Recalculate();
+            spriteBatch.DrawString(Main.font, Text, Position, TextColor);
             base.Draw(spriteBatch);
         }
     }

@@ -5,23 +5,23 @@ namespace LevelEditor.UI
 {
     class UIPanel : UIElement
     {
-        public int Width;
-        public int Height;
-        public Color backgroundColor;
+        public Color BackgroundColor;
         public UIPanel(int width, int height, Color backgroundcolor)
+        {
+            Width.Pixels = width;
+            Height.Pixels = height;
+            BackgroundColor = backgroundcolor;
+        }
+        public UIPanel(StyleDimension width, StyleDimension height, Color backgroundcolor)
         {
             Width = width;
             Height = height;
-            backgroundColor = backgroundcolor;
+            BackgroundColor = backgroundcolor;
         }
-        public override void Update(GameTime gameTime)
+        protected override void Draw(SpriteBatch spriteBatch)
         {
-            bounds = new Rectangle((int)absolutePos.X, (int)absolutePos.Y, Width, Height);
-            base.Update(gameTime);
-        }
-        public override void Draw(SpriteBatch spriteBatch)
-        {
-            spriteBatch.Draw(Main.solid, bounds, backgroundColor);
+            Recalculate();
+            spriteBatch.Draw(Main.solid, Dimensions, BackgroundColor);
             base.Draw(spriteBatch);
         }
     }
