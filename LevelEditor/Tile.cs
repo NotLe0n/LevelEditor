@@ -22,18 +22,18 @@ namespace LevelEditor
             rect = new Rectangle(Position.ToPoint(), rect.Size);
             if (!Main.mouseOverUI)
             {
-                if (rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom) ) && Main.RightHeld)
+                if (rect.Contains(Main.MousePos) && Main.RightHeld)
                 {
                     TileID = 0;
                 }
-                if (rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom) ) && Main.LeftHeld)
+                if (rect.Contains(Main.MousePos) && Main.LeftHeld)
                 {
                     TileID = Main.selectedMaterial;
                     texture = Main.textureMap.textures[Main.selectedMaterial];
                 }
             }
             // Hover text
-            if (TileID != 0 && rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom)))
+            if (TileID != 0 && rect.Contains(Main.MousePos))
             {
                 Main.MouseText = $"ID: {TileID}\n Dimensions: {rect}";
             }
@@ -41,7 +41,7 @@ namespace LevelEditor
         public void Draw()
         {
             // Draw tooltip
-            if (rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom)) && TileID != Main.selectedMaterial)
+            if (rect.Contains(Main.MousePos) && TileID != Main.selectedMaterial)
             {
                 Main.spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], rect, Color.White * 0.7f);
             }

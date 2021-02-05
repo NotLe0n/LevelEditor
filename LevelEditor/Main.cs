@@ -55,6 +55,7 @@ namespace LevelEditor
         public static float UIScale = 1f;
         public static Vector2 spawnPoint;
         public static List<Event> events = new List<Event>();
+        public static Vector2 MousePos;
 
         // ui
         private UIPanel panel;
@@ -110,8 +111,9 @@ namespace LevelEditor
             // Update Camera Position
             if (mouse.MiddleButton == ButtonState.Pressed)
             {
-                camPos -= mousedelta / zoom;
+                camPos -= mousedelta;
             }
+            MousePos = mouse.Position.ToVector2() / zoom - camPos / zoom;
 
             // Update UI
             for (int i = 0; i < UIElement.Parents.Count; i++)
