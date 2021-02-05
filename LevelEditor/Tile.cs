@@ -22,23 +22,30 @@ namespace LevelEditor
             rect = new Rectangle(Position.ToPoint(), rect.Size);
             if (!Main.mouseOverUI)
             {
-                if (rect.Contains(Main.mouse.Position.ToVector2() / Main.zoom) && Main.RightHeld)
+                if (rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom) ) && Main.RightHeld)
                 {
                     TileID = 0;
                 }
-                if (rect.Contains(Main.mouse.Position.ToVector2() / Main.zoom) && Main.LeftHeld)
+                if (rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom) ) && Main.LeftHeld)
                 {
                     TileID = Main.selectedMaterial;
                     texture = Main.textureMap.textures[Main.selectedMaterial];
                 }
             }
+            // Hover text
+            if (TileID != 0 && rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom)))
+            {
+                Main.MouseText = $"ID: {TileID}\n Dimensions: {rect}";
+            }
         }
         public void Draw()
         {
-            if (rect.Contains(Main.mouse.Position.ToVector2() / Main.zoom) && TileID != Main.selectedMaterial)
+            // Draw tooltip
+            if (rect.Contains((Main.mouse.Position.ToVector2() / Main.zoom)) && TileID != Main.selectedMaterial)
             {
-                Main.spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], rect, Color.White * 0.7f); // Color.White * 0.5f halbiert die transparenz
+                Main.spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], rect, Color.White * 0.7f);
             }
+            // Draw Tile
             else if (TileID != 0)
             {
                 Main.spriteBatch.Draw(texture, rect, Color.White);

@@ -27,6 +27,7 @@ namespace LevelEditor
             }
         }
         public static string? MouseText;
+
         // input stuff
         public static MouseState mouse = Mouse.GetState();
         public static MouseState lastmouse;
@@ -48,9 +49,13 @@ namespace LevelEditor
         public static TileMap tileMap;
         public static TextureMap textureMap;
         public static float zoom = 1;
+        public static Vector2 camPos;
         public static int selectedMaterial = 1;
         public static Matrix UIScaleMatrix => Matrix.CreateScale(1f);
         public static float UIScale = 1f;
+        public static Vector2 spawnPoint;
+        public static List<Event> events = new List<Event>();
+
         // ui
         private UIPanel panel;
         private UIButton inputBtn;
@@ -74,6 +79,7 @@ namespace LevelEditor
         {
 
             panel = new UIPanel(new StyleDimension(300, 0), new StyleDimension(0, 1), new Color(33, 33, 33));
+            panel.Height.Percent = 100;
             inputBtn = new UIButton(new UIText("Load tile", Color.White), 100, 30, Color.Blue);
             panel.Append(inputBtn);
             inputBtn.Padding = new Padding(5);
@@ -95,13 +101,25 @@ namespace LevelEditor
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            // Update Mouse and Keyboard Variables
             UpdateInput();
+
+            // Update Zoom
             zoom -= scrollwheel;
+
+            // Update Camera Position
+            if (mouse.MiddleButton == ButtonState.Pressed)
+            {
+                camPos -= mousedelta / zoom;
+            }
+
+            // Update UI
             for (int i = 0; i < UIElement.Parents.Count; i++)
             {
                 UIElement.Parents[i].InternalUpdate(gameTime);
             }
 
+            // Update Tiles
             if (tileMap != null)
             {
                 for (int x = 0; x < tileMap.width; x++)
@@ -109,17 +127,6 @@ namespace LevelEditor
                     for (int y = 0; y < tileMap.height; y++)
                     {
                         tileMap.tiles[x, y].Update();
-                    }
-                }
-
-                if (mouse.MiddleButton == ButtonState.Pressed)
-                {
-                    for (int x = 0; x < tileMap.width; x++)
-                    {
-                        for (int y = 0; y < tileMap.height; y++)
-                        {
-                            tileMap.tiles[x, y].Position -= mousedelta / zoom;
-                        }
                     }
                 }
             }
@@ -131,34 +138,54 @@ namespace LevelEditor
         {
             GraphicsDevice.Clear(Color.Gray);
 
+            // Update Transform matrix
             Matrix transform = Matrix.CreateScale(new Vector3(zoom, zoom, 1));
+            transform.Translation = new Vector3(camPos, 1);
+
             if (tileMap != null)
             {
+                // Apply Transform matrix
+                // Everything in here can be moved and zoomed by the mouse
                 spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.NonPremultiplied, null, null, null, null, transform);
-                spriteBatch.Draw(solid, new Rectangle(tileMap.tiles[0, 0].Position.ToPoint(), new Point(tileMap.width * 50, tileMap.height * 50)), Color.Black * 0.5f);
-                for (int x = 0; x < tileMap.width; x++)
                 {
-                    for (int y = 0; y < tileMap.height; y++)
+                    // Draw background
+                    spriteBatch.Draw(solid, new Rectangle(tileMap.tiles[0, 0].Position.ToPoint(), new Point(tileMap.width * 50, tileMap.height * 50)), Color.Black * 0.5f);
+
+                    // Draw Spawnpoint
+                    spriteBatch.Draw(solid, new Rectangle(spawnPoint.ToPoint(), new Point(50, 50)), Color.Red * 0.5f);
+
+                    // Draw tiles
+                    for (int x = 0; x < tileMap.width; x++)
                     {
-                        tileMap.tiles[x, y].Draw();
+                        for (int y = 0; y < tileMap.height; y++)
+                        {
+                            tileMap.tiles[x, y].Draw();
+                        }
+                    }
+
+                    // Draw events
+                    for (int i = 0; i < events.Count; i++)
+                    {
+                        spriteBatch.Draw(solid, events[i].Bounds, Color.Blue * 0.5f);
                     }
                 }
                 spriteBatch.End();
             }
 
             spriteBatch.Begin();
-            for (int i = 0; i < UIElement.Parents.Count; i++)
             {
-                UIElement.Parents[i].InternalDraw(spriteBatch);
-            }
+                for (int i = 0; i < UIElement.Parents.Count; i++)
+                {
+                    UIElement.Parents[i].InternalDraw(spriteBatch);
+                }
 
-            if (MouseText != null)
-            {
-                spriteBatch.DrawString(font, MouseText, (mouse.Position + new Point(10)).ToVector2(), Color.White);
-                MouseText = null;
+                if (MouseText != null)
+                {
+                    spriteBatch.DrawString(font, MouseText, mouse.Position.ToVector2() + new Vector2(10), Color.White);
+                    MouseText = null;
+                }
             }
             spriteBatch.End();
-            panel.Height.Pixels = screen.Height;
 
             base.Draw(gameTime);
         }
@@ -173,6 +200,7 @@ namespace LevelEditor
 
                 if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    events.Clear();
                     selectedFile = openFileDialog.FileName;
                     tileMap = new TileMap(selectedFile);
 
@@ -234,7 +262,19 @@ namespace LevelEditor
 
         private void SaveFile(MouseState evt, UIElement elm)
         {
-            string newFile = Path.GetFileName(textureMap.filePath) + "\nmap:\n";
+            // encode spawnPoint
+            string newFile = $"{spawnPoint.X} {spawnPoint.Y}\n";
+            // encode events
+            newFile += $"events:\n";
+            for (int i = 0; i < events.Count; i++)
+            {
+                newFile += $"{events[i].ID} {events[i].Bounds.X} {events[i].Bounds.Y} {events[i].Bounds.Width} {events[i].Bounds.Height} {string.Join(' ', events[i].Parameters)}\n";
+            }
+            // encode enemies
+            newFile += $"enemies:\n";
+            // encode texturemap
+            newFile += $"map:\n{Path.GetFileName(textureMap.filePath)}\n";
+            // encode tilemap
             for (int y = 0; y < tileMap.height; y++)
             {
                 for (int x = 0; x < tileMap.width; x++)
@@ -243,16 +283,18 @@ namespace LevelEditor
                 }
                 newFile += "\n";
             }
+            
             Stream fileStream;
-
+            // Configure save file dialog
             System.Windows.Forms.SaveFileDialog saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             saveFileDialog1.Filter = "level files (*.level)|*.level";
             saveFileDialog1.RestoreDirectory = true;
-
+            // Open save file dialog
             if (saveFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 if ((fileStream = saveFileDialog1.OpenFile()) != null)
                 {
+                    // save file
                     using var sr = new StreamWriter(fileStream);
                     sr.WriteLine(newFile.Trim());
                 }
