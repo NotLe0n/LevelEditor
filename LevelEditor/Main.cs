@@ -42,7 +42,8 @@ namespace LevelEditor
         public static bool mouseMoved;
         public static float scrollwheel;
         public static Vector2 mousedelta;
-        public static bool mouseOverUI => UIElement.Parents.Exists(x => x.IsMouseHovering);
+        public static bool MouseOverUI => UIElement.Parents.Exists(x => x.IsMouseHovering);
+        public static byte tool;
 
         // editor
         public static string selectedFile;
@@ -53,7 +54,7 @@ namespace LevelEditor
         public static int selectedMaterial = 1;
         public static Matrix UIScaleMatrix => Matrix.CreateScale(1f);
         public static float UIScale = 1f;
-        public static Vector2 spawnPoint;
+        public static Spawnpoint spawnPoint;
         public static List<Event> events = new List<Event>();
         public static Vector2 MousePos;
 
@@ -105,25 +106,17 @@ namespace LevelEditor
             // Update Mouse and Keyboard Variables
             UpdateInput();
 
-            // Update Zoom
-            zoom -= scrollwheel;
-
-            // Update Camera Position
-            if (mouse.MiddleButton == ButtonState.Pressed)
-            {
-                camPos -= mousedelta;
-            }
-            MousePos = mouse.Position.ToVector2() / zoom - camPos / zoom;
-
-            // Update UI
-            for (int i = 0; i < UIElement.Parents.Count; i++)
-            {
-                UIElement.Parents[i].InternalUpdate(gameTime);
-            }
-
-            // Update Tiles
             if (tileMap != null)
             {
+                // Update Zoom
+                zoom -= scrollwheel;
+
+                // Update Camera Position
+                if (mouse.MiddleButton == ButtonState.Pressed)
+                {
+                    camPos -= mousedelta;
+                }
+                MousePos = mouse.Position.ToVector2() / zoom - camPos / zoom;
                 for (int x = 0; x < tileMap.width; x++)
                 {
                     for (int y = 0; y < tileMap.height; y++)
@@ -131,6 +124,18 @@ namespace LevelEditor
                         tileMap.tiles[x, y].Update();
                     }
                 }
+
+                // Update Game Objects
+                for (int i = 0; i < GameObject.objects.Count; i++)
+                {
+                    GameObject.objects[i].Update();
+                }
+            }
+
+            // Update UI
+            for (int i = 0; i < UIElement.Parents.Count; i++)
+            {
+                UIElement.Parents[i].InternalUpdate(gameTime);
             }
 
             base.Update(gameTime);
@@ -153,9 +158,6 @@ namespace LevelEditor
                     // Draw background
                     spriteBatch.Draw(solid, new Rectangle(tileMap.tiles[0, 0].Position.ToPoint(), new Point(tileMap.width * 50, tileMap.height * 50)), Color.Black * 0.5f);
 
-                    // Draw Spawnpoint
-                    spriteBatch.Draw(solid, new Rectangle(spawnPoint.ToPoint(), new Point(50, 50)), Color.Red * 0.5f);
-
                     // Draw tiles
                     for (int x = 0; x < tileMap.width; x++)
                     {
@@ -165,10 +167,10 @@ namespace LevelEditor
                         }
                     }
 
-                    // Draw events
-                    for (int i = 0; i < events.Count; i++)
+                    // Draw GameObjects
+                    for (int i = 0; i < GameObject.objects.Count; i++)
                     {
-                        spriteBatch.Draw(solid, events[i].Bounds, Color.Blue * 0.5f);
+                        GameObject.objects[i].Draw();
                     }
                 }
                 spriteBatch.End();
@@ -206,10 +208,22 @@ namespace LevelEditor
                     selectedFile = openFileDialog.FileName;
                     tileMap = new TileMap(selectedFile);
 
+                    var toolbtn0 = new UIButton(new UIText("Drag tool", Color.Black), 100, 50, Color.White);
+                    toolbtn0.X.Percent = 25;
+                    toolbtn0.Y.Pixels = 70;
+                    toolbtn0.OnClick += (evt, elm) => tool = 0;
+                    panel.Append(toolbtn0);
+
+                    var toolbtn1 = new UIButton(new UIText("Draw tool", Color.Black), 100, 50, Color.White);
+                    toolbtn1.X.Percent = 75;
+                    toolbtn1.Y.Pixels = 70;
+                    toolbtn1.OnClick += (evt, elm) => tool = 1;
+                    panel.Append(toolbtn1);
+
                     ReloadMaterialList();
 
                     texmapImg = new UIImage(textureMap.map, (int)(textureMap.map.Width / 2.5f), (int)(textureMap.map.Height / 2.5f));
-                    texmapImg.Y.Pixels = 70 * materialList.Count + 100;
+                    texmapImg.Y.Pixels = 70 * materialList.Count + 200;
                     texmapImg.X.Pixels = 20;
                     texmapImg.OnClick += OpenTexMap;
                     panel.Append(texmapImg);
@@ -254,7 +268,7 @@ namespace LevelEditor
 
                     texmapImg.Remove();
                     texmapImg = new UIImage(textureMap.map, (int)(textureMap.map.Width / 2.5f), (int)(textureMap.map.Height / 2.5f));
-                    texmapImg.Y.Pixels = 70 * materialList.Count + 100;
+                    texmapImg.Y.Pixels = 70 * materialList.Count + 200;
                     texmapImg.X.Pixels = 20;
                     texmapImg.OnClick += OpenTexMap;
                     panel.Append(texmapImg);
@@ -265,17 +279,21 @@ namespace LevelEditor
         private void SaveFile(MouseState evt, UIElement elm)
         {
             // encode spawnPoint
-            string newFile = $"{spawnPoint.X} {spawnPoint.Y}\n";
+            string newFile = $"{spawnPoint}\n";
+
             // encode events
             newFile += $"events:\n";
             for (int i = 0; i < events.Count; i++)
             {
-                newFile += $"{events[i].ID} {events[i].Bounds.X} {events[i].Bounds.Y} {events[i].Bounds.Width} {events[i].Bounds.Height} {string.Join(' ', events[i].Parameters)}\n";
+                newFile += $"{events[i]}\n";
             }
+
             // encode enemies
             newFile += $"enemies:\n";
+
             // encode texturemap
             newFile += $"map:\n{Path.GetFileName(textureMap.filePath)}\n";
+
             // encode tilemap
             for (int y = 0; y < tileMap.height; y++)
             {
@@ -285,12 +303,14 @@ namespace LevelEditor
                 }
                 newFile += "\n";
             }
-            
+
             Stream fileStream;
+
             // Configure save file dialog
             System.Windows.Forms.SaveFileDialog saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             saveFileDialog1.Filter = "level files (*.level)|*.level";
             saveFileDialog1.RestoreDirectory = true;
+
             // Open save file dialog
             if (saveFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -304,19 +324,23 @@ namespace LevelEditor
         }
         private void ReloadMaterialList()
         {
-            for(int i = 0; i < materialList.Count; i++)
+            // Reset Material list
+            for (int i = 0; i < materialList.Count; i++)
             {
                 materialList[i].Remove();
             }
             materialList = new List<UIButton>();
             selectedMaterial = 1;
+
+            // Generate Material List
             int temp = 0;
             for (int i = 0; i < textureMap.textures.Count; i++)
             {
                 var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
                 temp += 70;
                 btn.X.Percent = 50;
-                btn.Y.Pixels = temp;
+                btn.Y.Pixels = 100;
+                btn.Y.Pixels += temp;
                 btn.OnClick += (evt, elm) =>
                 {
                     if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))

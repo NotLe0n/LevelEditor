@@ -20,7 +20,7 @@ namespace LevelEditor
         public void Update()
         {
             rect = new Rectangle(Position.ToPoint(), rect.Size);
-            if (!Main.mouseOverUI)
+            if (!Main.MouseOverUI && Main.tool == 1)
             {
                 if (rect.Contains(Main.MousePos) && Main.RightHeld)
                 {
@@ -41,13 +41,16 @@ namespace LevelEditor
         public void Draw()
         {
             // Draw tooltip
-            if (rect.Contains(Main.MousePos) && TileID != Main.selectedMaterial)
+            if (rect.Contains(Main.MousePos) && TileID != Main.selectedMaterial && Main.tool == 1)
             {
                 Main.spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], rect, Color.White * 0.7f);
             }
             // Draw Tile
-            else if (TileID != 0)
+            if (TileID != 0)
             {
+                if (Main.tool == 1 && rect.Contains(Main.MousePos) && TileID != Main.selectedMaterial)
+                    return;
+
                 Main.spriteBatch.Draw(texture, rect, Color.White);
             }
         }

@@ -17,7 +17,7 @@ namespace LevelEditor
 
             // Read Spawn Point
             string[] spLine = lines[0].Split(' '); //The line where the spawnPoint is written
-            Main.spawnPoint = new Vector2(int.Parse(spLine[0]), int.Parse(spLine[1]));
+            Main.spawnPoint = new Spawnpoint(new Vector2(int.Parse(spLine[0]), int.Parse(spLine[1])));
 
             #region Events
             for (int i = 2; i < lines.Length && lines[i] != "enemies:"; i++)
