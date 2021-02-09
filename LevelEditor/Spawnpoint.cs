@@ -1,20 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace LevelEditor
 {
     public class Spawnpoint : GameObject
     {
-        public Rectangle Bounds => new Rectangle(Position.ToPoint(), new Point(50, 50));
-        public Vector2 Position { get; set; }
+        public Vector2 Position;
         public Spawnpoint(Vector2 pos)
         {
             Position = pos;
         }
         public override void Update()
         {
+            Bounds = new Rectangle(Position.ToPoint(), new Point(50, 50));
+
             if (Bounds.Contains(Main.MousePos))
             {
                 Main.MouseText = $"Position {Position}";

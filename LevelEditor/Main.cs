@@ -1,10 +1,9 @@
 ﻿using LevelEditor.UI;
+using LevelEditor.UI.UIStates;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 
 namespace LevelEditor
@@ -15,9 +14,10 @@ namespace LevelEditor
         public static GraphicsDeviceManager graphics;
         public static SpriteBatch spriteBatch;
         public static Texture2D solid;
+        public static Texture2D panel;
         public static SpriteFont font;
         public static Game instance;
-        public static Rectangle screen
+        public static Rectangle Screen
         {
             get
             {
@@ -27,6 +27,7 @@ namespace LevelEditor
             }
         }
         public static string? MouseText;
+        public static List<UIState> UIStates = new List<UIState>();
 
         // input stuff
         public static MouseState mouse = Mouse.GetState();
@@ -42,7 +43,7 @@ namespace LevelEditor
         public static bool mouseMoved;
         public static float scrollwheel;
         public static Vector2 mousedelta;
-        public static bool MouseOverUI => UIElement.Parents.Exists(x => x.IsMouseHovering);
+        public static bool MouseOverUI => UIStates.Exists(x => x.elements.Exists(x => x.IsMouseHovering));
         public static byte tool;
 
         // editor
@@ -59,11 +60,7 @@ namespace LevelEditor
         public static Vector2 MousePos;
 
         // ui
-        private UIPanel panel;
-        private UIButton inputBtn;
-        private List<UIButton> materialList = new List<UIButton>();
-        private UIButton saveBtn;
-        private UIImage texmapImg;
+        private UIState sidebar;
         public Main()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -75,19 +72,16 @@ namespace LevelEditor
             // Maximize Window
             System.Windows.Forms.Form form = (System.Windows.Forms.Form)System.Windows.Forms.Control.FromHandle(Window.Handle);
             form.WindowState = System.Windows.Forms.FormWindowState.Maximized;
-        }
 
+            sidebar = new Sidebar();
+            UIStates.Add(sidebar);
+        }
         protected override void Initialize()
         {
-
-            panel = new UIPanel(new StyleDimension(300, 0), new StyleDimension(0, 1), new Color(33, 33, 33));
-            panel.Height.Percent = 100;
-            inputBtn = new UIButton(new UIText("Load tile", Color.White), 100, 30, Color.Blue);
-            panel.Append(inputBtn);
-            inputBtn.Padding = new Padding(5);
-            inputBtn.X.Percent = 50;
-            inputBtn.Y.Pixels = 10;
-            inputBtn.OnClick += OpenFile;
+            for (int i = 0; i < UIStates.Count; i++)
+            {
+                UIStates[i].Initialize();
+            }
             base.Initialize();
         }
 
@@ -96,6 +90,7 @@ namespace LevelEditor
             spriteBatch = new SpriteBatch(GraphicsDevice);
             solid = Content.Load<Texture2D>("solid");
             font = Content.Load<SpriteFont>("font");
+            panel = Content.Load<Texture2D>("panel");
         }
 
         protected override void Update(GameTime gameTime)
@@ -133,9 +128,9 @@ namespace LevelEditor
             }
 
             // Update UI
-            for (int i = 0; i < UIElement.Parents.Count; i++)
+            for (int i = 0; i < UIStates.Count; i++)
             {
-                UIElement.Parents[i].InternalUpdate(gameTime);
+                UIStates[i].UpdateSelf(gameTime);
             }
 
             base.Update(gameTime);
@@ -176,11 +171,12 @@ namespace LevelEditor
                 spriteBatch.End();
             }
 
+            // UI
             spriteBatch.Begin();
             {
-                for (int i = 0; i < UIElement.Parents.Count; i++)
+                for (int i = 0; i < UIStates.Count; i++)
                 {
-                    UIElement.Parents[i].InternalDraw(spriteBatch);
+                    UIStates[i].DrawSelf(spriteBatch);
                 }
 
                 if (MouseText != null)
@@ -190,93 +186,13 @@ namespace LevelEditor
                 }
             }
             spriteBatch.End();
-
             base.Draw(gameTime);
         }
 
-        private void OpenFile(MouseState evt, UIElement elm)
-        {
-            using (System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog())
-            {
-                openFileDialog.InitialDirectory = Content.RootDirectory;
-                openFileDialog.Filter = "level files (*.level)|*.level";
-                openFileDialog.RestoreDirectory = true;
-
-                if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    events.Clear();
-                    selectedFile = openFileDialog.FileName;
-                    tileMap = new TileMap(selectedFile);
-
-                    var toolbtn0 = new UIButton(new UIText("Drag tool", Color.Black), 100, 50, Color.White);
-                    toolbtn0.X.Percent = 25;
-                    toolbtn0.Y.Pixels = 70;
-                    toolbtn0.OnClick += (evt, elm) => tool = 0;
-                    panel.Append(toolbtn0);
-
-                    var toolbtn1 = new UIButton(new UIText("Draw tool", Color.Black), 100, 50, Color.White);
-                    toolbtn1.X.Percent = 75;
-                    toolbtn1.Y.Pixels = 70;
-                    toolbtn1.OnClick += (evt, elm) => tool = 1;
-                    panel.Append(toolbtn1);
-
-                    ReloadMaterialList();
-
-                    texmapImg = new UIImage(textureMap.map, (int)(textureMap.map.Width / 2.5f), (int)(textureMap.map.Height / 2.5f));
-                    texmapImg.Y.Pixels = 70 * materialList.Count + 200;
-                    texmapImg.X.Pixels = 20;
-                    texmapImg.OnClick += OpenTexMap;
-                    panel.Append(texmapImg);
-
-                    saveBtn = new UIButton(new UIText("Save File", Color.White), 100, 30, Color.DarkGray);
-                    saveBtn.OnClick += SaveFile;
-                    saveBtn.X.Percent = 50;
-                    saveBtn.Y.Percent = 95;
-                    panel.Append(saveBtn);
-                }
-            }
-        }
-
-        private void OpenTexMap(MouseState evt, UIElement elm)
-        {
-            using (System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog())
-            {
-                openFileDialog.InitialDirectory = Content.RootDirectory;
-                openFileDialog.Filter = "Texmap files (*.texmap)|*.texmap";
-                openFileDialog.RestoreDirectory = true;
-
-                if (openFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    string file = openFileDialog.FileName;
-                    textureMap = new TextureMap(file);
-                    for (int x = 0; x < tileMap.width; x++)
-                    {
-                        for (int y = 0; y < tileMap.height; y++)
-                        {
-                            try
-                            {
-                                tileMap.tiles[x, y].texture = textureMap.textures[tileMap.tiles[x, y].TileID];
-                            }
-                            catch
-                            {
-                                tileMap.tiles[x, y].TileID = 0;
-                            }
-                        }
-                    }
-
-                    ReloadMaterialList();
-
-                    texmapImg.Remove();
-                    texmapImg = new UIImage(textureMap.map, (int)(textureMap.map.Width / 2.5f), (int)(textureMap.map.Height / 2.5f));
-                    texmapImg.Y.Pixels = 70 * materialList.Count + 200;
-                    texmapImg.X.Pixels = 20;
-                    texmapImg.OnClick += OpenTexMap;
-                    panel.Append(texmapImg);
-                }
-            }
-        }
-
-        private void SaveFile(MouseState evt, UIElement elm)
+        /// <summary>
+        /// Encodes data into .level file
+        /// </summary>
+        public static void SaveFile(MouseState evt, UIElement elm)
         {
             // encode spawnPoint
             string newFile = $"{spawnPoint}\n";
@@ -307,9 +223,11 @@ namespace LevelEditor
             Stream fileStream;
 
             // Configure save file dialog
-            System.Windows.Forms.SaveFileDialog saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
-            saveFileDialog1.Filter = "level files (*.level)|*.level";
-            saveFileDialog1.RestoreDirectory = true;
+            System.Windows.Forms.SaveFileDialog saveFileDialog1 = new System.Windows.Forms.SaveFileDialog
+            {
+                Filter = "level files (*.level)|*.level",
+                RestoreDirectory = true
+            };
 
             // Open save file dialog
             if (saveFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
@@ -322,40 +240,7 @@ namespace LevelEditor
                 }
             }
         }
-        private void ReloadMaterialList()
-        {
-            // Reset Material list
-            for (int i = 0; i < materialList.Count; i++)
-            {
-                materialList[i].Remove();
-            }
-            materialList = new List<UIButton>();
-            selectedMaterial = 1;
 
-            // Generate Material List
-            int temp = 0;
-            for (int i = 0; i < textureMap.textures.Count; i++)
-            {
-                var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
-                temp += 70;
-                btn.X.Percent = 50;
-                btn.Y.Pixels = 100;
-                btn.Y.Pixels += temp;
-                btn.OnClick += (evt, elm) =>
-                {
-                    if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
-                        selectedMaterial = result;
-                    else
-                        selectedMaterial = 0;
-                };
-                var matImg = new UIImage(textureMap.textures[i], 32, 32);
-                matImg.Y.Percent = 50;
-                matImg.X.Percent = 25;
-                btn.Append(matImg);
-                materialList.Add(btn);
-                panel.Append(btn);
-            }
-        }
         /// <summary>
         /// Updates input variables
         /// </summary>
@@ -384,10 +269,8 @@ namespace LevelEditor
         /// <returns>the loaded Texture</returns>
         public static Texture2D LoadTexture(string path)
         {
-            using (FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open))
-            {
-                return Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
-            }
+            using FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open);
+            return Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
         }
         /// <summary>
         /// Loads a part of a Texture from path defined by a sourceRectangle
@@ -397,15 +280,14 @@ namespace LevelEditor
         /// <returns>A Texture2D containing the specified part</returns>
         public static Texture2D LoadTexturePart(string path, Rectangle srcRect)
         {
-            using (FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open))
-            {
-                Texture2D wholeTex = Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
-                Texture2D returnTex = new Texture2D(instance.GraphicsDevice, srcRect.Width, srcRect.Height);
-                Color[] data = new Color[srcRect.Width * srcRect.Height];
-                wholeTex.GetData(0, srcRect, data, 0, data.Length);
-                returnTex.SetData(data);
-                return returnTex;
-            }
+            using FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open);
+
+            Texture2D wholeTex = Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
+            Texture2D returnTex = new Texture2D(instance.GraphicsDevice, srcRect.Width, srcRect.Height);
+            Color[] data = new Color[srcRect.Width * srcRect.Height];
+            wholeTex.GetData(0, srcRect, data, 0, data.Length);
+            returnTex.SetData(data);
+            return returnTex;
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
-namespace LevelEditor.UI
+namespace LevelEditor.UI.UIElements
 {
     class UIButton : UIPanel
     {

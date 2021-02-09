@@ -29,7 +29,7 @@ namespace LevelEditor
 
                 // Read Event Params
                 List<string> evtParams = new List<string>();
-                for(int j = 5; j < evtLines.Length; j++)
+                for (int j = 5; j < evtLines.Length; j++)
                 {
                     evtParams.Add(evtLines[j]);
                 }
@@ -50,7 +50,7 @@ namespace LevelEditor
                     Array.Copy(lines, i, mapLines, 0, lines.Length - i);
                 }
             }
-            
+
             //Load Textures from File (texMap handles this)
             Main.textureMap = new TextureMap(Path.GetDirectoryName(filePath) + @"\" + mapLines[1]);
 

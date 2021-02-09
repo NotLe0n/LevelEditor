@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace LevelEditor.UI
@@ -78,24 +77,17 @@ namespace LevelEditor.UI
         Visible,
         None
     }
-    public class UIElement : IComparable<UIElement>
+    public class UIElement
     {
         public delegate void MouseEvent(MouseState evt, UIElement elm);
         public delegate void KeyboardEvent(KeyboardState evt, UIElement elm);
-        public static List<UIElement> Parents = new List<UIElement>();
-
-        public UIElement With(Action action)
-        {
-            action();
-            return this;
-        }
 
         public UIElement Parent { get; protected internal set; }
 
         public List<UIElement> Children = new List<UIElement>();
-        public int Count => Children.Count;
 
         public bool IsMouseHovering { get; private set; }
+
         public object HoverText = null;
 
         public Vector2 Position
@@ -146,6 +138,7 @@ namespace LevelEditor.UI
         public event MouseEvent OnClick;
         public event MouseEvent OnDoubleClick;
         public event MouseEvent OnTripleClick;
+        public event MouseEvent OnClickAway;
         public event MouseEvent OnMouseDown;
         public event MouseEvent OnMouseUp;
         public event MouseEvent OnMouseOut;
@@ -155,13 +148,14 @@ namespace LevelEditor.UI
 
         public event KeyboardEvent OnKeyPressed;
         public event KeyboardEvent OnKeyReleased;
-        public event KeyboardEvent OnKeyTyped;
+        public event Action<object, TextInputEventArgs> OnKeyTyped;
 
         public event Action<SpriteBatch> OnPreDraw;
         #endregion
+
         public UIElement()
         {
-            Parents.Add(this);
+            Main.instance.Window.TextInput += KeyTyped;
         }
 
         #region Virtual methods
@@ -223,6 +217,11 @@ namespace LevelEditor.UI
             OnTripleClick?.Invoke(args, elm);
         }
 
+        protected virtual void ClickAway(MouseState args, UIElement elm)
+        {
+            OnClickAway?.Invoke(args, elm);
+        }
+
         protected virtual void MouseMove(MouseState args, UIElement elm)
         {
             OnMouseMove?.Invoke(args, elm);
@@ -242,19 +241,21 @@ namespace LevelEditor.UI
         {
             OnMouseLeave?.Invoke(args, elm);
         }
+
         protected virtual void MouseOver(MouseState args, UIElement elm)
         {
             OnMouseOver?.Invoke(args, elm);
         }
+
         protected virtual void MouseOut(MouseState args, UIElement elm)
         {
             OnMouseOut?.Invoke(args, elm);
         }
 
         // Keyboard Events
-        protected virtual void KeyTyped(KeyboardState args, UIElement elm)
+        protected virtual void KeyTyped(object sender, TextInputEventArgs args)
         {
-            OnKeyTyped?.Invoke(args, elm);
+            OnKeyTyped?.Invoke(sender, args);
         }
 
         protected virtual void KeyReleased(KeyboardState args, UIElement elm)
@@ -335,7 +336,7 @@ namespace LevelEditor.UI
                 spriteBatch.Draw(Main.solid, Dimensions, Color.LimeGreen * 0.5f);
                 if (InnerDimensions != Dimensions) spriteBatch.Draw(Main.solid, InnerDimensions, Color.LightBlue * 0.5f);
             }
-        }     
+        }
         #endregion
         private void UpdateEvents()
         {
@@ -383,19 +384,31 @@ namespace LevelEditor.UI
                 {
                     MouseLeave(Main.mouse, this);
                 }
+                if (Main.LeftClick)
+                {
+                    ClickAway(Main.mouse, this);
+                }
+            }
+            if (Main.keyboard.GetPressedKeyCount() > 0)
+            {
+                KeyPressed(Main.keyboard, this);
+            }
+            else
+            {
+                KeyReleased(Main.keyboard, this);
             }
         }
 
         public virtual void Recalculate()
         {
-            Rectangle parent = Parent?.InnerDimensions ?? new Rectangle(0, 0, (int)(Main.screen.Width * (1f / Main.UIScale)), (int)(Main.screen.Height * (1f / Main.UIScale)));
+            Rectangle parent = Parent?.InnerDimensions ?? new Rectangle(0, 0, (int)(Main.Screen.Width * (1f / Main.UIScale)), (int)(Main.Screen.Height * (1f / Main.UIScale)));
 
             Rectangle dimensions = Rectangle.Empty;
 
             int minWidth = Math.Max(0, MinWidth ?? 0);
             int minHeight = Math.Max(0, MinHeight ?? 0);
-            int maxWidth = (int)Math.Min(Main.screen.Width * (1f / Main.UIScale), MaxWidth ?? Main.screen.Width * (1f / Main.UIScale));
-            int maxHeight = (int)Math.Min(Main.screen.Height * (1f / Main.UIScale), MaxHeight ?? Main.screen.Height * (1f / Main.UIScale));
+            int maxWidth = (int)Math.Min(Main.Screen.Width * (1f / Main.UIScale), MaxWidth ?? Main.Screen.Width * (1f / Main.UIScale));
+            int maxHeight = (int)Math.Min(Main.Screen.Height * (1f / Main.UIScale), MaxHeight ?? Main.Screen.Height * (1f / Main.UIScale));
 
             dimensions.Width = (int)(Width.Percent * parent.Width / 100f + Width.Pixels);
             if (dimensions.Width < minWidth) dimensions.Width = minWidth;
@@ -465,15 +478,12 @@ namespace LevelEditor.UI
             return ContainsPoint(point) && Display != Display.None ? this : null;
         }
 
-        public virtual int CompareTo(UIElement other) => 0;
-
         public void Append(UIElement item)
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
             if (Children.Contains(item)) throw new Exception($"Element {item} is already added");
 
             Children.Add(item);
-            Parents.Remove(item);
             item.Parent = this;
             item.Recalculate();
         }
@@ -501,7 +511,6 @@ namespace LevelEditor.UI
 
         public void Remove()
         {
-            Parents.Remove(this);
             Parent.Children.Remove(this);
             Parent = null;
         }
