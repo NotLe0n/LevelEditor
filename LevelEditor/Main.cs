@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace LevelEditor
@@ -48,19 +49,17 @@ namespace LevelEditor
 
         // editor
         public static string selectedFile;
-        public static TileMap tileMap;
+        public static Level level;
         public static TextureMap textureMap;
         public static float zoom = 1;
         public static Vector2 camPos;
         public static int selectedMaterial = 1;
         public static Matrix UIScaleMatrix => Matrix.CreateScale(1f);
         public static float UIScale = 1f;
-        public static Spawnpoint spawnPoint;
-        public static List<Event> events = new List<Event>();
         public static Vector2 MousePos;
 
         // ui
-        private UIState sidebar;
+        private readonly UIState sidebar;
         public Main()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -78,10 +77,7 @@ namespace LevelEditor
         }
         protected override void Initialize()
         {
-            for (int i = 0; i < UIStates.Count; i++)
-            {
-                UIStates[i].Initialize();
-            }
+            sidebar.Initialize();
             base.Initialize();
         }
 
@@ -101,7 +97,7 @@ namespace LevelEditor
             // Update Mouse and Keyboard Variables
             UpdateInput();
 
-            if (tileMap != null)
+            if (level != null)
             {
                 // Update Zoom
                 zoom -= scrollwheel;
@@ -112,26 +108,12 @@ namespace LevelEditor
                     camPos -= mousedelta;
                 }
                 MousePos = mouse.Position.ToVector2() / zoom - camPos / zoom;
-                for (int x = 0; x < tileMap.width; x++)
-                {
-                    for (int y = 0; y < tileMap.height; y++)
-                    {
-                        tileMap.tiles[x, y].Update();
-                    }
-                }
 
-                // Update Game Objects
-                for (int i = 0; i < GameObject.objects.Count; i++)
-                {
-                    GameObject.objects[i].Update();
-                }
+                level.Update();
             }
 
             // Update UI
-            for (int i = 0; i < UIStates.Count; i++)
-            {
-                UIStates[i].UpdateSelf(gameTime);
-            }
+            sidebar.UpdateSelf(gameTime);
 
             base.Update(gameTime);
         }
@@ -144,40 +126,25 @@ namespace LevelEditor
             Matrix transform = Matrix.CreateScale(new Vector3(zoom, zoom, 1));
             transform.Translation = new Vector3(camPos, 1);
 
-            if (tileMap != null)
+            if (level != null)
             {
                 // Apply Transform matrix
                 // Everything in here can be moved and zoomed by the mouse
-                spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.NonPremultiplied, null, null, null, null, transform);
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, null, null, null, null, transform);
                 {
                     // Draw background
-                    spriteBatch.Draw(solid, new Rectangle(tileMap.tiles[0, 0].Position.ToPoint(), new Point(tileMap.width * 50, tileMap.height * 50)), Color.Black * 0.5f);
+                    spriteBatch.Draw(solid, new Rectangle(level.tiles[0, 0].Position.ToPoint(), new Point(level.width * 50, level.height * 50)), Color.Black * 0.5f);
 
-                    // Draw tiles
-                    for (int x = 0; x < tileMap.width; x++)
-                    {
-                        for (int y = 0; y < tileMap.height; y++)
-                        {
-                            tileMap.tiles[x, y].Draw();
-                        }
-                    }
-
-                    // Draw GameObjects
-                    for (int i = 0; i < GameObject.objects.Count; i++)
-                    {
-                        GameObject.objects[i].Draw();
-                    }
+                    // Draw Level
+                    level.Draw(spriteBatch);
                 }
                 spriteBatch.End();
             }
 
             // UI
-            spriteBatch.Begin();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, null, null, null, null, null);
             {
-                for (int i = 0; i < UIStates.Count; i++)
-                {
-                    UIStates[i].DrawSelf(spriteBatch);
-                }
+                sidebar.DrawSelf(spriteBatch);
 
                 if (MouseText != null)
                 {
@@ -195,27 +162,31 @@ namespace LevelEditor
         public static void SaveFile(MouseState evt, UIElement elm)
         {
             // encode spawnPoint
-            string newFile = $"{spawnPoint}\n";
+            string newFile = $"{level.spawnPoint}\n";
 
             // encode events
             newFile += $"events:\n";
-            for (int i = 0; i < events.Count; i++)
+            for (int i = 0; i < level.EventTriggers.Count; i++)
             {
-                newFile += $"{events[i]}\n";
+                newFile += $"{level.EventTriggers[i]}\n";
             }
 
             // encode enemies
             newFile += $"enemies:\n";
+            for (int i = 0; i < level.Enemies.Count; i++)
+            {
+                newFile += $"{level.Enemies[i]}\n";
+            }
 
             // encode texturemap
             newFile += $"map:\n{Path.GetFileName(textureMap.filePath)}\n";
 
             // encode tilemap
-            for (int y = 0; y < tileMap.height; y++)
+            for (int y = 0; y < level.height; y++)
             {
-                for (int x = 0; x < tileMap.width; x++)
+                for (int x = 0; x < level.width; x++)
                 {
-                    newFile += tileMap.tiles[x, y].TileID;
+                    newFile += level.tiles[x, y].TileID;
                 }
                 newFile += "\n";
             }
@@ -260,34 +231,6 @@ namespace LevelEditor
             RightReleased = mouse.RightButton == ButtonState.Released;
             LeftClick = LeftReleased && lastmouse.LeftButton == ButtonState.Pressed;
             RightClick = RightReleased && lastmouse.RightButton == ButtonState.Pressed;
-        }
-
-        /// <summary>
-        /// Loads texture from file
-        /// </summary>
-        /// <param name="path">absolute file path</param>
-        /// <returns>the loaded Texture</returns>
-        public static Texture2D LoadTexture(string path)
-        {
-            using FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open);
-            return Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
-        }
-        /// <summary>
-        /// Loads a part of a Texture from path defined by a sourceRectangle
-        /// </summary>
-        /// <param name="path">absolute file path</param>
-        /// <param name="srcRect">source Rectangle which defines what Part of the Texture is loaded</param>
-        /// <returns>A Texture2D containing the specified part</returns>
-        public static Texture2D LoadTexturePart(string path, Rectangle srcRect)
-        {
-            using FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(selectedFile)) + @"\Content\" + path + ".png", FileMode.Open);
-
-            Texture2D wholeTex = Texture2D.FromStream(graphics.GraphicsDevice, fileStream);
-            Texture2D returnTex = new Texture2D(instance.GraphicsDevice, srcRect.Width, srcRect.Height);
-            Color[] data = new Color[srcRect.Width * srcRect.Height];
-            wholeTex.GetData(0, srcRect, data, 0, data.Length);
-            returnTex.SetData(data);
-            return returnTex;
         }
     }
 }

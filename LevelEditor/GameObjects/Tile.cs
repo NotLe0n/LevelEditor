@@ -1,57 +1,55 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace LevelEditor
+namespace LevelEditor.GameObjects
 {
-    public class Tile
+    public class Tile : GameObject
     {
-        public Rectangle rect;
         public int TileID;
         public Texture2D texture;
         public Vector2 Position;
         public static readonly Vector2 TileSize = new Vector2(50, 50); //for less magic numbers
         public Tile(Vector2 pos, int tileID, Texture2D tex = null)
         {
-            rect = new Rectangle((int)pos.X, (int)pos.Y, (int)TileSize.X, (int)TileSize.Y);
             TileID = tileID;
             texture = tex;
             Position = pos;
         }
-        public void Update()
+        public override void Update()
         {
-            rect = new Rectangle(Position.ToPoint(), rect.Size);
+            Bounds = new Rectangle(Position.ToPoint(), TileSize.ToPoint());
             if (!Main.MouseOverUI && Main.tool == 1)
             {
-                if (rect.Contains(Main.MousePos) && Main.RightHeld)
+                if (Bounds.Contains(Main.MousePos) && Main.RightHeld)
                 {
                     TileID = 0;
                 }
-                if (rect.Contains(Main.MousePos) && Main.LeftHeld)
+                if (Bounds.Contains(Main.MousePos) && Main.LeftHeld)
                 {
                     TileID = Main.selectedMaterial;
                     texture = Main.textureMap.textures[Main.selectedMaterial];
                 }
             }
             // Hover text
-            if (TileID != 0 && rect.Contains(Main.MousePos))
+            if (TileID != 0 && Bounds.Contains(Main.MousePos))
             {
-                Main.MouseText = $"ID: {TileID}\n Dimensions: {rect}";
+                Main.MouseText = $"ID: {TileID}\n Dimensions: {Bounds}";
             }
         }
-        public void Draw()
+        public override void Draw(SpriteBatch spriteBatch)
         {
             // Draw tooltip
-            if (rect.Contains(Main.MousePos) && TileID != Main.selectedMaterial && Main.tool == 1)
+            if (Bounds.Contains(Main.MousePos) && TileID != Main.selectedMaterial && Main.tool == 1)
             {
-                Main.spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], rect, Color.White * 0.7f);
+                spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], Bounds, Color.White * 0.7f);
             }
             // Draw Tile
             if (TileID != 0)
             {
-                if (Main.tool == 1 && rect.Contains(Main.MousePos) && TileID != Main.selectedMaterial)
+                if (Main.tool == 1 && Bounds.Contains(Main.MousePos) && TileID != Main.selectedMaterial)
                     return;
 
-                Main.spriteBatch.Draw(texture, rect, Color.White);
+                spriteBatch.Draw(texture, Bounds, Color.White);
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
-namespace LevelEditor
+namespace LevelEditor.GameObjects
 {
     public class Spawnpoint : GameObject
     {
@@ -23,14 +24,18 @@ namespace LevelEditor
             }
             base.Update();
         }
-        public override void Draw()
+        public override void Draw(SpriteBatch spriteBatch)
         {
-            Main.spriteBatch.Draw(Main.solid, Bounds, Color.Red * 0.5f);
-            base.Draw();
+            spriteBatch.Draw(Main.solid, Bounds, Color.Red * 0.5f);
         }
         public override string ToString()
         {
             return $"{(int)Position.X} {(int)Position.Y}";
+        }
+        public override void Remove()
+        {
+            Main.level.spawnPoint = null;
+            base.Remove();
         }
     }
 }

@@ -1,8 +1,43 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.IO;
 using System.Linq;
 
-namespace ExtentionMethods
+namespace LevelEditor
 {
+    public static class Helper
+    {
+        /// <summary>
+        /// Loads texture from file
+        /// </summary>
+        /// <param name="path">absolute file path</param>
+        /// <returns>the loaded Texture</returns>
+        public static Texture2D LoadTexture(string path)
+        {
+            using FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(Main.selectedFile)) + @"\Content\" + path + ".png", FileMode.Open);
+            return Texture2D.FromStream(Main.graphics.GraphicsDevice, fileStream);
+        }
+
+        /// <summary>
+        /// Loads a part of a Texture from path defined by a sourceRectangle
+        /// </summary>
+        /// <param name="path">absolute file path</param>
+        /// <param name="srcRect">source Rectangle which defines what Part of the Texture is loaded</param>
+        /// <returns>A Texture2D containing the specified part</returns>
+        public static Texture2D LoadTexturePart(string path, Rectangle srcRect)
+        {
+            using FileStream fileStream = new FileStream(Path.GetDirectoryName(Path.GetDirectoryName(Main.selectedFile)) + @"\Content\" + path + ".png", FileMode.Open);
+
+            Texture2D wholeTex = Texture2D.FromStream(Main.graphics.GraphicsDevice, fileStream);
+            Texture2D returnTex = new Texture2D(Main.instance.GraphicsDevice, srcRect.Width, srcRect.Height);
+            Color[] data = new Color[srcRect.Width * srcRect.Height];
+            wholeTex.GetData(0, srcRect, data, 0, data.Length);
+            returnTex.SetData(data);
+            return returnTex;
+        }
+    }
+
     public static class Extention
     {
         public static bool IsValid(this char c)

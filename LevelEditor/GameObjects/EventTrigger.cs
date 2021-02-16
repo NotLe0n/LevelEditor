@@ -1,12 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
-namespace LevelEditor
+namespace LevelEditor.GameObjects
 {
-    public class Event : GameObject
+    public class EventTrigger : GameObject
     {
         public int ID;
         public string[] Parameters;
-        public Event(int id, Rectangle rect, params string[] parameters)
+        public EventTrigger(int id, Rectangle rect, params string[] parameters)
         {
             ID = id;
             Bounds = rect;
@@ -24,14 +25,18 @@ namespace LevelEditor
             }
             base.Update();
         }
-        public override void Draw()
+        public override void Draw(SpriteBatch spriteBatch)
         {
-            Main.spriteBatch.Draw(Main.solid, Bounds, Color.Blue * 0.5f);
-            base.Draw();
+            spriteBatch.Draw(Main.solid, Bounds, Color.Blue * 0.5f);
         }
         public override string ToString()
         {
             return $"{ID} {Bounds.X} {Bounds.Y} {Bounds.Width} {Bounds.Height} {string.Join(' ', Parameters)}";
+        }
+        public override void Remove()
+        {
+            Main.level.EventTriggers.Remove(this);
+            base.Remove();
         }
     }
 }

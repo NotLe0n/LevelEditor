@@ -24,16 +24,13 @@ namespace LevelEditor
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] line = lines[i].Split(' ');
-                map = Main.LoadTexture(line[1]);
-                //Loading a single png without srcRect like before
-                if (line.Length == 2)
-                {
-                    textures.Add(int.Parse(line[0]), Main.LoadTexture(line[1]));
-                }
-                else if (line.Length == 6) //Loading from a Tileset with a srcRect
+                map = Helper.LoadTexture(line[1]);
+
+                //Loading from a Tileset with a srcRect
+                if (line.Length == 6)
                 {
                     Rectangle srcRect = new Rectangle(int.Parse(line[2]), int.Parse(line[3]), int.Parse(line[4]), int.Parse(line[5]));
-                    textures.Add(int.Parse(line[0]), Main.LoadTexturePart(line[1], srcRect));
+                    textures.Add(int.Parse(line[0]), Helper.LoadTexturePart(line[1], srcRect));
                 }
                 else
                 {

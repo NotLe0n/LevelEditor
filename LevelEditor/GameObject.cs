@@ -1,6 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System.Collections.Generic;
 
 namespace LevelEditor
 {
@@ -10,12 +10,8 @@ namespace LevelEditor
         public event MouseEvent OnClick;
         public event MouseEvent OnClickAway;
 
-        public static List<GameObject> objects = new List<GameObject>();
         public Rectangle Bounds;
-        public GameObject()
-        {
-            objects.Add(this);
-        }
+
         public virtual void Update()
         {
             if (Main.tool == 0 && Main.LeftClick && !Main.MouseOverUI)
@@ -30,9 +26,12 @@ namespace LevelEditor
                 }
             }
         }
-        public virtual void Draw()
+        public virtual void Draw(SpriteBatch spriteBatch)
         {
 
+        }
+        public virtual void Remove()
+        {
         }
     }
 }
