@@ -23,11 +23,12 @@ namespace LevelEditor.GameObjects
                 if (Bounds.Contains(Main.MousePos) && Main.RightHeld)
                 {
                     TileID = 0;
+                    Main.level.UpdateTextures();
                 }
                 if (Bounds.Contains(Main.MousePos) && Main.LeftHeld)
                 {
                     TileID = Main.selectedMaterial;
-                    texture = Main.textureMap.textures[Main.selectedMaterial];
+                    Main.level.UpdateTextures();
                 }
             }
             // Hover text
@@ -41,7 +42,7 @@ namespace LevelEditor.GameObjects
             // Draw tooltip
             if (Bounds.Contains(Main.MousePos) && TileID != Main.selectedMaterial && Main.tool == 1)
             {
-                spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial], Bounds, Color.White * 0.7f);
+                spriteBatch.Draw(Main.textureMap.textures[Main.selectedMaterial][1], Bounds, Color.White * 0.7f);
             }
             // Draw Tile
             if (TileID != 0)

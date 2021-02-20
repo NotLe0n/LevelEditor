@@ -89,12 +89,6 @@ namespace LevelEditor.UI.UIStates
 
                 ReloadMaterialList();
 
-                texmapImg = new UIImage(Main.textureMap.map, (int)(Main.textureMap.map.Width / 2.5f), (int)(Main.textureMap.map.Height / 2.5f));
-                texmapImg.Y.Pixels = 70 * materialList.Count + 200;
-                texmapImg.X.Pixels = 20;
-                texmapImg.OnClick += OpenTexMap;
-                drawPanel.Append(texmapImg);
-
                 saveBtn = new UIButton(new UIText("Save File", Color.Black), 100, 30, Color.DarkGray);
                 saveBtn.OnClick += Main.SaveFile;
                 saveBtn.X.Percent = 50;
@@ -293,39 +287,16 @@ namespace LevelEditor.UI.UIStates
                 Main.textureMap = new TextureMap(file);
 
                 // change texture
-                for (int x = 0; x < Main.level.width; x++)
-                {
-                    for (int y = 0; y < Main.level.height; y++)
-                    {
-                        try
-                        {
-                            Main.level.tiles[x, y].texture = Main.textureMap.textures[Main.level.tiles[x, y].TileID];
-                        }
-                        catch
-                        {
-                            // if the texture has an invalid ID
-                            Main.level.tiles[x, y].TileID = 0;
-                        }
-                    }
-                }
-
-                ReloadMaterialList();
+                Main.level.UpdateTextures();
 
                 texmapImg.Remove();
-                texmapImg = new UIImage(Main.textureMap.map, (int)(Main.textureMap.map.Width / 2.5f), (int)(Main.textureMap.map.Height / 2.5f));
-                texmapImg.Y.Pixels = 70 * materialList.Count + 200;
-                texmapImg.X.Pixels = 20;
-                texmapImg.OnClick += OpenTexMap;
-                panel.Append(texmapImg);
+                ReloadMaterialList();
             }
         }
         private void ReloadMaterialList()
         {
-            // Reset Material list
-            for (int i = 0; i < materialList.Count; i++)
-            {
-                materialList[i].Remove();
-            }
+            // Reset
+            drawPanel.Clear();
             materialList = new List<UIButton>();
             Main.selectedMaterial = 1;
 
@@ -336,8 +307,7 @@ namespace LevelEditor.UI.UIStates
                 var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
                 temp += 70;
                 btn.X.Percent = 50;
-                btn.Y.Pixels = 100;
-                btn.Y.Pixels += temp;
+                btn.Y.Pixels = 100 + temp;
                 btn.OnClick += (evt, elm) =>
                 {
                     if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
@@ -345,12 +315,18 @@ namespace LevelEditor.UI.UIStates
                     else
                         Main.selectedMaterial = 0;
                 };
-                var matImg = new UIImage(Main.textureMap.textures[i], 32, 32);
+                var matImg = new UIImage(Main.textureMap.textures[i][1], 32, 32);
                 matImg.Y.Percent = 50;
                 matImg.X.Percent = 25;
                 btn.Append(matImg);
                 materialList.Add(btn);
                 drawPanel.Append(btn);
+
+                texmapImg = new UIImage(Main.textureMap.maps[i], (int)(Main.textureMap.maps[i].Width / 2f), (int)(Main.textureMap.maps[i].Height / 2f));
+                texmapImg.Y.Pixels = 150 * Main.textureMap.textures.Count;
+                texmapImg.X.Pixels = 50 + 32 * i;
+                texmapImg.OnClick += OpenTexMap;
+                drawPanel.Append(texmapImg);
             }
         }
     }

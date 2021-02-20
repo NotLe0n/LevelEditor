@@ -11,32 +11,38 @@ namespace LevelEditor
     //the texture loading from a .texmap file
     public class TextureMap
     {
-        public Dictionary<int, Texture2D> textures;//The Dictianory holding the Textures
+        //The Dictianory holding the Textures
+        public Dictionary<int, Texture2D[]> textures;
         public string filePath;
-        public Texture2D map;
+        public Texture2D[] maps;
         public TextureMap(string file)
         {
             filePath = file;
-            textures = new Dictionary<int, Texture2D>();
+            textures = new Dictionary<int, Texture2D[]>();
             //Load File
             string[] lines = File.ReadAllLines(file);
+
+            var temp = new List<Texture2D>();
             //Load Textures from File
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] line = lines[i].Split(' ');
-                map = Helper.LoadTexture(line[1]);
 
-                //Loading from a Tileset with a srcRect
-                if (line.Length == 6)
+                temp.Add(Helper.LoadTexture(line[1]));
+
+                List<Texture2D> sliced = new List<Texture2D>();
+                for (int y = 0; y < 4; y++)
                 {
-                    Rectangle srcRect = new Rectangle(int.Parse(line[2]), int.Parse(line[3]), int.Parse(line[4]), int.Parse(line[5]));
-                    textures.Add(int.Parse(line[0]), Helper.LoadTexturePart(line[1], srcRect));
+                    for (int x = 0; x < 4; x++)
+                    {
+                        Rectangle srcRect = new Rectangle(x * 16, y * 16, 16, 16);
+                        sliced.Add(Helper.LoadTexturePart(line[1], srcRect));
+                    }
                 }
-                else
-                {
-                    Debug.WriteLine($"File \"{file}\" is written in a wrong way");
-                }
+                textures.Add(int.Parse(line[0]), sliced.ToArray());
             }
+            maps = temp.ToArray();
         }
     }
 }
+

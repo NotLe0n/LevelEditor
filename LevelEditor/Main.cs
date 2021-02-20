@@ -130,7 +130,7 @@ namespace LevelEditor
             {
                 // Apply Transform matrix
                 // Everything in here can be moved and zoomed by the mouse
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, null, null, null, null, transform);
+                spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp, null, null, null, transform);
                 {
                     // Draw background
                     spriteBatch.Draw(solid, new Rectangle(level.tiles[0, 0].Position.ToPoint(), new Point(level.width * 50, level.height * 50)), Color.Black * 0.5f);
@@ -142,7 +142,7 @@ namespace LevelEditor
             }
 
             // UI
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, null, null, null, null, null);
+            spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointClamp, null, null, null, null);
             {
                 sidebar.DrawSelf(spriteBatch);
 
