@@ -46,7 +46,11 @@ namespace LevelEditor
         public static Vector2 mousedelta;
         public static bool MouseOverUI => UIStates.Exists(x => x.elements.Exists(x => x.IsMouseHovering));
         public static byte tool;
-
+        public enum toolID
+        {
+            select = 0,
+            drawTile = 1
+        }
         // editor
         public static string selectedFile;
         public static Level level;

@@ -31,6 +31,11 @@ namespace LevelEditor.GameObjects
         {
             spriteBatch.Draw(Main.solid, Bounds, Color.Yellow * 0.5f);
         }
+        public override void Remove()
+        {
+            Main.level.Enemies.Remove(this);
+            base.Remove();
+        }
         public override string ToString()
         {
             return $"{ID} {Bounds.X} {Bounds.Y} {string.Join(' ', Parameters)}";

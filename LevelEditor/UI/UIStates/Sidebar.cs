@@ -61,7 +61,7 @@ namespace LevelEditor.UI.UIStates
                 toolbtn0.Y.Pixels = 70;
                 toolbtn0.OnClick += (evt, elm) =>
                 {
-                    Main.tool = 0;
+                    Main.tool = (byte)Main.toolID.select;
                     drawPanel.Display = Display.None;
                     selectPanel.Display = Display.Visible;
                 };
@@ -81,7 +81,7 @@ namespace LevelEditor.UI.UIStates
                 toolbtn1.Y.Pixels = 70;
                 toolbtn1.OnClick += (evt, elm) =>
                 {
-                    Main.tool = 1;
+                    Main.tool = (byte)Main.toolID.drawTile;
                     drawPanel.Display = Display.Visible;
                     selectPanel.Display = Display.None;
                 };
@@ -136,22 +136,6 @@ namespace LevelEditor.UI.UIStates
             eventInfo.Y.Pixels = 150;
             eventInfo.Display = Display.None;
             selectPanel.Append(eventInfo);
-
-            // Toggle Display
-            for (int i = 0; i < Main.level.EventTriggers.Count; i++)
-            {
-                Main.level.EventTriggers[i].OnClick += (evt, elm) =>
-                {
-                    eventInfo.Display = Display.Visible;
-                    selectedEvent = (EventTrigger)elm;
-
-                    selectedEvent.OnClickAway += (evt, elm) =>
-                    {
-                        eventInfo.Display = Display.None;
-                        selectedEvent = null;
-                    };
-                };
-            }
 
             // Settings
             var evtID = new UIInput<int>("ID", 200, 50, Color.LightSkyBlue, Color.Black);
@@ -209,6 +193,33 @@ namespace LevelEditor.UI.UIStates
             evtParams.Y.Pixels = 300;
             evtParams.TextChanged += (evt, elm) => selectedEvent.Parameters = evtParams.Input.Text.Split(' ');
             eventInfo.Append(evtParams);
+
+            var deleteBtn = new UIButton(new UIText("Delete", Color.White), 250, 50, Color.DarkRed);
+            deleteBtn.Y.Pixels = 400;
+            deleteBtn.X.Percent = 50;
+            deleteBtn.OnClick += (evt, elm) =>
+            {
+                selectedEvent.Remove();
+                eventInfo.Display = Display.None;
+                selectedEvent = null;
+            };
+            eventInfo.Append(deleteBtn);
+
+            // Toggle Display
+            for (int i = 0; i < Main.level.EventTriggers.Count; i++)
+            {
+                Main.level.EventTriggers[i].OnClick += (evt, elm) =>
+                {
+                    eventInfo.Display = Display.Visible;
+                    selectedEvent = (EventTrigger)elm;
+
+                    selectedEvent.OnClickAway += (evt, elm) =>
+                    {
+                        eventInfo.Display = Display.None;
+                        selectedEvent = null;
+                    };
+                };
+            }
         }
         private void CreateEnemyMenu()
         {
@@ -271,6 +282,17 @@ namespace LevelEditor.UI.UIStates
             enemyParams.Y.Pixels = 200;
             enemyParams.TextChanged += (evt, elm) => selectedEnemy.Parameters = enemyParams.Input.Text.Split(' ');
             enemyInfo.Append(enemyParams);
+
+            var deleteBtn = new UIButton(new UIText("Delete", Color.White), 250, 50, Color.DarkRed);
+            deleteBtn.Y.Pixels = 400;
+            deleteBtn.X.Percent = 50;
+            deleteBtn.OnClick += (evt, elm) =>
+            {
+                selectedEnemy.Remove();
+                enemyInfo.Display = Display.None;
+                selectedEnemy = null;
+            };
+            enemyInfo.Append(deleteBtn);
         }
         private void OpenTexMap(MouseState evt, UIElement elm)
         {
@@ -300,6 +322,26 @@ namespace LevelEditor.UI.UIStates
             materialList = new List<UIButton>();
             Main.selectedMaterial = 1;
 
+            var addEvents = new UIButton(new UIText("Add event", Color.Black), 100, 50, Color.White);
+            addEvents.X.Percent = 25;
+            addEvents.Y.Pixels = 150;
+            addEvents.OnClick += (evt, elm) =>
+            {
+                var trigger = new EventTrigger(0, new Rectangle(Point.Zero, new Point(100, 100)));
+                Main.level.EventTriggers.Add(trigger);
+            };
+            drawPanel.Append(addEvents);
+
+            var addEnemy = new UIButton(new UIText("Add enemy", Color.Black), 100, 50, Color.White);
+            addEnemy.X.Percent = 75;
+            addEnemy.Y.Pixels = 150;
+            addEnemy.OnClick += (evt, elm) =>
+            {
+                var enemy = new Enemy(0, Vector2.Zero);
+                Main.level.Enemies.Add(enemy);
+            };
+            drawPanel.Append(addEnemy);
+
             // Generate Material List
             int temp = 0;
             for (int i = 0; i < Main.textureMap.textures.Count; i++)
@@ -307,7 +349,7 @@ namespace LevelEditor.UI.UIStates
                 var btn = new UIButton(new UIText(i, Color.White), 150, 50, Color.DarkGray);
                 temp += 70;
                 btn.X.Percent = 50;
-                btn.Y.Pixels = 100 + temp;
+                btn.Y.Pixels = 150 + temp;
                 btn.OnClick += (evt, elm) =>
                 {
                     if (elm is UIButton button && int.TryParse(button.Text.Text, out int result))
